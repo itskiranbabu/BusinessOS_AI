@@ -73,15 +73,19 @@ const App: React.FC = () => {
 
   // Initialize Auth Check
   useEffect(() => {
+    let subscription: { unsubscribe: () => void } | null = null;
+
     const checkAuth = async () => {
       if (isSupabaseConfigured() && supabase) {
+        // Check active session
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
           setUserEmail(session.user.email || '');
           setIsAuthenticated(true);
         }
         
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        // Listen for changes
+        const { data } = supabase.auth.onAuthStateChange((_event, session) => {
           if (session?.user) {
             setUserEmail(session.user.email || '');
             setIsAuthenticated(true);
@@ -91,15 +95,18 @@ const App: React.FC = () => {
             setBlueprint(null);
           }
         });
-        
+        subscription = data.subscription;
         setAuthChecking(false);
-        return () => subscription.unsubscribe();
       } else {
         setAuthChecking(false);
       }
     };
 
     checkAuth();
+
+    return () => {
+      if (subscription) subscription.unsubscribe();
+    };
   }, []);
 
   // Check for saved project on mount/auth

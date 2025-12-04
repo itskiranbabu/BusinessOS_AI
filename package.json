@@ -13,7 +13,7 @@
     "react-dom": "^19.2.0",
     "@google/genai": "^1.30.0",
     "lucide-react": "^0.555.0",
-    "recharts": "^3.5.1",
+    "recharts": "2.12.2",
     "@supabase/supabase-js": "2.45.1"
   },
   "devDependencies": {
