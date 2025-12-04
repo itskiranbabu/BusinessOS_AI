@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
-import { BusinessBlueprint } from '../types';
-import { Save, User, Briefcase, Target, ShieldCheck } from 'lucide-react';
+import { BusinessBlueprint, Client } from '../types';
+import { Save, User, Briefcase, Target, ShieldCheck, Download, FileText } from 'lucide-react';
 
 interface SettingsProps {
   blueprint: BusinessBlueprint;
   userEmail: string | null;
   onUpdateProfile: (data: Partial<BusinessBlueprint>) => void;
+  clients?: Client[];
 }
 
-const Settings: React.FC<SettingsProps> = ({ blueprint, userEmail, onUpdateProfile }) => {
+const Settings: React.FC<SettingsProps> = ({ blueprint, userEmail, onUpdateProfile, clients = [] }) => {
   const [formData, setFormData] = useState({
     businessName: blueprint.businessName,
     niche: blueprint.niche,
@@ -22,6 +23,37 @@ const Settings: React.FC<SettingsProps> = ({ blueprint, userEmail, onUpdateProfi
     onUpdateProfile(formData);
     setIsSaved(true);
     setTimeout(() => setIsSaved(false), 2000);
+  };
+
+  const handleExportCSV = () => {
+    if (clients.length === 0) {
+        alert("No clients to export.");
+        return;
+    }
+
+    const headers = ["ID", "Name", "Email", "Status", "Program", "Progress", "Last Check-in"];
+    const csvContent = [
+        headers.join(","),
+        ...clients.map(c => [
+            c.id, 
+            `"${c.name}"`, 
+            c.email, 
+            c.status, 
+            `"${c.program}"`, 
+            c.progress, 
+            `"${c.lastCheckIn}"`
+        ].join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `clients_export_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   return (
@@ -52,6 +84,17 @@ const Settings: React.FC<SettingsProps> = ({ blueprint, userEmail, onUpdateProfi
               <ShieldCheck size={14} /> Secure Connection
             </div>
           </div>
+        </div>
+        <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex justify-between items-center">
+             <div className="text-sm text-slate-500 dark:text-slate-400">
+                 Data Management
+             </div>
+             <button 
+                onClick={handleExportCSV}
+                className="text-slate-700 dark:text-slate-200 hover:text-primary-600 dark:hover:text-primary-400 font-medium text-sm flex items-center gap-2 transition-colors"
+             >
+                 <Download size={16} /> Export Clients (.CSV)
+             </button>
         </div>
       </div>
 

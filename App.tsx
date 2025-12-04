@@ -240,6 +240,16 @@ const App: React.FC = () => {
     addToast('Client removed', 'info');
   };
 
+  const handleCaptureLead = (email: string) => {
+    handleAddClient({
+        name: 'Website Lead',
+        email: email,
+        status: ClientStatus.LEAD,
+        program: 'Waitlist',
+    });
+    addToast('New lead captured from website!', 'success');
+  };
+
   const handleUpdateContentPlan = (newPlan: SocialPost[]) => {
     if (blueprint) {
       handleUpdateBlueprint({ contentPlan: newPlan });
@@ -301,7 +311,13 @@ const App: React.FC = () => {
           />
         );
       case AppView.WEBSITE:
-        return <WebsiteBuilder blueprint={blueprint} onUpdate={(updates) => handleUpdateBlueprint({ websiteData: { ...blueprint.websiteData, ...updates } })} />;
+        return (
+            <WebsiteBuilder 
+                blueprint={blueprint} 
+                onUpdate={(updates) => handleUpdateBlueprint({ websiteData: { ...blueprint.websiteData, ...updates } })} 
+                onCaptureLead={handleCaptureLead}
+            />
+        );
       case AppView.CONTENT:
         return (
           <ContentEngine 
@@ -320,6 +336,7 @@ const App: React.FC = () => {
             blueprint={blueprint} 
             userEmail={userEmail} 
             onUpdateProfile={handleUpdateBlueprint} 
+            clients={clients}
           />
         );
       default:

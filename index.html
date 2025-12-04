@@ -3,9 +3,20 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>BusinessOS.ai - Fitness Vertical</title>
+    
+    <!-- SEO & Social Sharing -->
+    <title>BusinessOS.ai | The AI Operating System for Fitness Coaches</title>
+    <meta name="description" content="Build, Launch & Grow your Fitness Business in Minutes. Features AI-generated business blueprints, CRM, Website Building, and Content Planning." />
+    <meta property="og:title" content="BusinessOS.ai - AI for Fitness Coaches" />
+    <meta property="og:description" content="The all-in-one operating system to run your fitness coaching business. CRM, Content, Website, and Automations powered by Gemini AI." />
+    <meta property="og:type" content="website" />
+    <meta name="theme-color" content="#7c3aed" />
+
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡️</text></svg>" />
+
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script>
       tailwind.config = {
         darkMode: 'class',
@@ -38,6 +49,7 @@
             animation: {
               'fade-in': 'fadeIn 0.5s ease-out',
               'slide-up': 'slideUp 0.5s ease-out',
+              'blob': 'blob 7s infinite',
             },
             keyframes: {
               fadeIn: {
@@ -47,6 +59,12 @@
               slideUp: {
                 '0%': { transform: 'translateY(20px)', opacity: '0' },
                 '100%': { transform: 'translateY(0)', opacity: '1' },
+              },
+              blob: {
+                '0%': { transform: 'translate(0px, 0px) scale(1)' },
+                '33%': { transform: 'translate(30px, -50px) scale(1.1)' },
+                '66%': { transform: 'translate(-20px, 20px) scale(0.9)' },
+                '100%': { transform: 'translate(0px, 0px) scale(1)' },
               }
             }
           },

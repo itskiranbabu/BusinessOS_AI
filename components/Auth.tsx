@@ -41,10 +41,10 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-stretch">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-stretch transition-colors duration-300">
       {/* Left Panel - Visuals */}
-      <div className="hidden lg:flex flex-col justify-between w-1/2 bg-slate-900 p-12 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary-900 via-slate-900 to-slate-900 opacity-80 z-0"></div>
+      <div className="hidden lg:flex flex-col justify-between w-1/2 bg-slate-900 dark:bg-black p-12 relative overflow-hidden border-r border-slate-800">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary-900 via-slate-900 to-slate-900 dark:to-black opacity-80 z-0"></div>
         <div className="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 bg-primary-600 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
         <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-96 h-96 bg-purple-600 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
 
@@ -78,19 +78,19 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
       </div>
 
       {/* Right Panel - Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-white">
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-white dark:bg-slate-900 transition-colors duration-300">
         <div className="max-w-md w-full">
             <div className="text-center lg:text-left mb-8">
-                <h2 className="text-3xl font-bold text-slate-900">
+                <h2 className="text-3xl font-bold text-slate-900 dark:text-white">
                     {isLogin ? 'Welcome Back' : 'Create Account'}
                 </h2>
-                <p className="text-slate-500 mt-2">
+                <p className="text-slate-500 dark:text-slate-400 mt-2">
                     {isLogin ? 'Enter your details to access your dashboard.' : 'Start your 14-day free trial today.'}
                 </p>
             </div>
 
             {error && (
-                <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-xl flex items-center gap-3 text-sm text-red-600 animate-fade-in">
+                <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 rounded-xl flex items-center gap-3 text-sm text-red-600 dark:text-red-400 animate-fade-in">
                 <AlertCircle size={18} />
                 {error}
                 </div>
@@ -98,30 +98,30 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
 
             <form onSubmit={handleSubmit} className="space-y-5">
                 <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">Email Address</label>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Email Address</label>
                 <div className="relative group">
-                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary-600 transition-colors" size={18} />
+                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 group-focus-within:text-primary-600 dark:group-focus-within:text-primary-400 transition-colors" size={18} />
                     <input 
                     type="email" 
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all outline-none"
+                    className="w-full pl-10 pr-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white bg-white dark:bg-slate-800 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 dark:focus:border-primary-500 transition-all outline-none"
                     placeholder="coach@example.com"
                     />
                 </div>
                 </div>
 
                 <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">Password</label>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Password</label>
                 <div className="relative group">
-                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary-600 transition-colors" size={18} />
+                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 group-focus-within:text-primary-600 dark:group-focus-within:text-primary-400 transition-colors" size={18} />
                     <input 
                     type="password" 
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all outline-none"
+                    className="w-full pl-10 pr-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white bg-white dark:bg-slate-800 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 dark:focus:border-primary-500 transition-all outline-none"
                     placeholder="••••••••"
                     />
                 </div>
@@ -145,22 +145,22 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
             </form>
 
             <div className="mt-8 text-center">
-                <p className="text-sm text-slate-500">
+                <p className="text-sm text-slate-500 dark:text-slate-400">
                     {isLogin ? "Don't have an account? " : "Already have an account? "}
                     <button 
                     onClick={() => {
                         setIsLogin(!isLogin);
                         setError(null);
                     }}
-                    className="text-primary-600 font-semibold hover:text-primary-700 hover:underline transition-colors"
+                    className="text-primary-600 dark:text-primary-400 font-semibold hover:text-primary-700 dark:hover:text-primary-300 hover:underline transition-colors"
                     >
                     {isLogin ? 'Sign Up' : 'Log In'}
                     </button>
                 </p>
             </div>
             
-            <div className="mt-8 pt-6 border-t border-slate-100 text-center">
-                <p className="text-xs text-slate-400">
+            <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800 text-center">
+                <p className="text-xs text-slate-400 dark:text-slate-500">
                 {process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL ? 
                     'Connected to Supabase Secure Auth' : 
                     'Demo Mode (Default credentials pre-filled)'}
