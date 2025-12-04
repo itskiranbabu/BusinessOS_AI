@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { SocialPost, BusinessBlueprint } from '../types';
-import { Calendar, Copy, Share2, Video, Image as ImageIcon, Type, Layers, RefreshCw } from 'lucide-react';
+import { Calendar, Copy, Share2, Video, Image as ImageIcon, Type, Layers, RefreshCw, CheckCircle2 } from 'lucide-react';
 
 interface ContentEngineProps {
   blueprint: BusinessBlueprint;
@@ -23,6 +23,13 @@ const ContentEngine: React.FC<ContentEngineProps> = ({ blueprint, onUpdatePlan, 
     } finally {
       setIsRegenerating(false);
     }
+  };
+
+  const handleSchedule = (id: string) => {
+      const updated = blueprint.contentPlan.map(post => 
+          post.id === id ? { ...post, status: 'Scheduled' as const } : post
+      );
+      onUpdatePlan(updated);
   };
 
   const getIcon = (type: string) => {
@@ -53,7 +60,14 @@ const ContentEngine: React.FC<ContentEngineProps> = ({ blueprint, onUpdatePlan, 
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {blueprint.contentPlan.map((post) => (
-          <div key={post.id} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col h-full hover:shadow-md dark:hover:shadow-slate-800/50 transition-all duration-300">
+          <div key={post.id} className={`bg-white dark:bg-slate-900 rounded-2xl border ${post.status === 'Scheduled' ? 'border-green-200 dark:border-green-900/50 ring-2 ring-green-100 dark:ring-green-900/20' : 'border-slate-200 dark:border-slate-800'} shadow-sm flex flex-col h-full hover:shadow-md dark:hover:shadow-slate-800/50 transition-all duration-300 relative overflow-hidden`}>
+            
+            {post.status === 'Scheduled' && (
+                <div className="absolute top-0 right-0 bg-green-500 text-white text-[10px] font-bold px-3 py-1 rounded-bl-xl z-10">
+                    SCHEDULED
+                </div>
+            )}
+
             <div className="p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 rounded-t-2xl flex justify-between items-center">
               <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-2">
                 <Calendar size={14} /> Day {post.day}
@@ -86,8 +100,16 @@ const ContentEngine: React.FC<ContentEngineProps> = ({ blueprint, onUpdatePlan, 
               <button className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-colors border border-slate-200 dark:border-slate-700">
                 <Copy size={16} /> Copy
               </button>
-              <button className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-bold text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-xl transition-colors border border-primary-100 dark:border-primary-900/30">
-                <Share2 size={16} /> Schedule
+              <button 
+                onClick={() => handleSchedule(post.id)}
+                disabled={post.status === 'Scheduled'}
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-bold rounded-xl transition-colors border ${
+                    post.status === 'Scheduled' 
+                    ? 'bg-green-100 text-green-700 border-green-200 cursor-default' 
+                    : 'text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 border-primary-100 dark:border-primary-900/30'
+                }`}
+              >
+                {post.status === 'Scheduled' ? <><CheckCircle2 size={16}/> Scheduled</> : <><Share2 size={16} /> Schedule</>}
               </button>
             </div>
           </div>

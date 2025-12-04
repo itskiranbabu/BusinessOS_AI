@@ -336,7 +336,7 @@ const App: React.FC = () => {
       case AppView.AUTOMATIONS:
         return <Automations automations={automations} onUpdate={handleUpdateAutomations} />;
       case AppView.PAYMENTS:
-        return <Payments blueprint={blueprint} />;
+        return <Payments blueprint={blueprint} clients={clients} />;
       case AppView.SETTINGS:
         return (
           <Settings 

@@ -33,6 +33,7 @@ export interface SocialPost {
   body: string;
   cta: string;
   type: 'Video' | 'Image' | 'Carousel' | 'Text';
+  status?: 'Draft' | 'Scheduled' | 'Published';
 }
 
 export interface WebsiteData {

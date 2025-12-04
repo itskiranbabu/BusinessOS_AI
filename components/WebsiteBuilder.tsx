@@ -47,6 +47,13 @@ const WebsiteBuilder: React.FC<WebsiteBuilderProps> = ({ blueprint, onUpdate, on
     }
   };
 
+  const scrollToSection = (id: string) => {
+    const element = document.getElementById(`preview-${id}`);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
   return (
     <div className="h-full flex flex-col gap-6 animate-fade-in">
       <div className="flex justify-between items-center flex-wrap gap-4">
@@ -93,15 +100,15 @@ const WebsiteBuilder: React.FC<WebsiteBuilderProps> = ({ blueprint, onUpdate, on
 
       <div className="flex-1 bg-slate-200 dark:bg-slate-800 rounded-2xl border border-slate-300 dark:border-slate-700 overflow-hidden relative shadow-inner p-4 md:p-8 flex items-center justify-center transition-all">
         {/* Mock Browser Window */}
-        <div className={`bg-white w-full h-full shadow-2xl overflow-y-auto transition-all duration-500 ease-in-out ${viewMode === 'mobile' ? 'max-w-sm rounded-[3rem] border-8 border-slate-900 h-[90%] pb-12 hide-scrollbar' : 'max-w-6xl rounded-xl'}`}>
+        <div className={`bg-white w-full h-full shadow-2xl overflow-y-auto transition-all duration-500 ease-in-out scroll-smooth ${viewMode === 'mobile' ? 'max-w-sm rounded-[3rem] border-8 border-slate-900 h-[90%] pb-12 hide-scrollbar' : 'max-w-6xl rounded-xl'}`}>
           {/* Header */}
           <header className={`px-8 py-5 border-b flex justify-between items-center sticky top-0 bg-white/95 backdrop-blur z-10 ${viewMode === 'mobile' ? 'px-4 py-3' : ''}`}>
             <div className={`font-bold text-slate-900 ${viewMode === 'mobile' ? 'text-lg' : 'text-xl'}`}>{blueprint.businessName}</div>
             {viewMode === 'desktop' && (
-                <nav className="hidden md:flex gap-8 text-sm font-medium text-slate-600">
-                <a href="#" className="hover:text-primary-600 transition-colors">Program</a>
-                <a href="#" className="hover:text-primary-600 transition-colors">Stories</a>
-                <a href="#" className="hover:text-primary-600 transition-colors">Pricing</a>
+                <nav className="hidden md:flex gap-8 text-sm font-medium text-slate-600 cursor-pointer">
+                <a onClick={() => scrollToSection('program')} className="hover:text-primary-600 transition-colors">Program</a>
+                <a onClick={() => scrollToSection('stories')} className="hover:text-primary-600 transition-colors">Stories</a>
+                <a onClick={() => scrollToSection('pricing')} className="hover:text-primary-600 transition-colors">Pricing</a>
                 </nav>
             )}
             <button className={`bg-slate-900 text-white rounded-full font-medium hover:bg-slate-800 transition-colors ${viewMode === 'mobile' ? 'px-3 py-1.5 text-xs' : 'px-5 py-2 text-sm'}`}>
@@ -110,7 +117,7 @@ const WebsiteBuilder: React.FC<WebsiteBuilderProps> = ({ blueprint, onUpdate, on
           </header>
 
           {/* Hero */}
-          <section className={`text-center mx-auto ${viewMode === 'mobile' ? 'py-12 px-4' : 'py-24 px-8 max-w-5xl'}`}>
+          <section id="preview-hero" className={`text-center mx-auto ${viewMode === 'mobile' ? 'py-12 px-4' : 'py-24 px-8 max-w-5xl'}`}>
             {isEditing ? (
                 <div className="space-y-4">
                     <input 
@@ -150,7 +157,7 @@ const WebsiteBuilder: React.FC<WebsiteBuilderProps> = ({ blueprint, onUpdate, on
           </section>
 
           {/* Lead Capture Section (Functional) */}
-          <section className="py-16 bg-slate-900 text-white text-center px-6">
+          <section id="preview-program" className="py-16 bg-slate-900 text-white text-center px-6">
             <div className="max-w-xl mx-auto">
                 <h2 className="text-2xl font-bold mb-4">Join the waitlist</h2>
                 <p className="text-slate-400 mb-8">Get exclusive access and free tips delivered to your inbox.</p>
@@ -179,7 +186,7 @@ const WebsiteBuilder: React.FC<WebsiteBuilderProps> = ({ blueprint, onUpdate, on
           </section>
 
           {/* Social Proof */}
-          <section className="py-20 bg-slate-50 border-y border-slate-200">
+          <section id="preview-stories" className="py-20 bg-slate-50 border-y border-slate-200">
             <div className={`mx-auto px-8 ${viewMode === 'mobile' ? '' : 'max-w-6xl'}`}>
               <h2 className="text-center text-3xl font-bold text-slate-900 mb-12">Success Stories</h2>
               <div className={`grid gap-8 ${viewMode === 'mobile' ? 'grid-cols-1' : 'md:grid-cols-3'}`}>
@@ -202,7 +209,7 @@ const WebsiteBuilder: React.FC<WebsiteBuilderProps> = ({ blueprint, onUpdate, on
           </section>
 
           {/* Pricing */}
-          <section className="py-24 px-8">
+          <section id="preview-pricing" className="py-24 px-8">
              <div className="max-w-5xl mx-auto">
                <h2 className="text-center text-4xl font-bold text-slate-900 mb-16">Simple Pricing</h2>
                <div className={`grid gap-8 items-center ${viewMode === 'mobile' ? 'grid-cols-1' : 'md:grid-cols-2'}`}>

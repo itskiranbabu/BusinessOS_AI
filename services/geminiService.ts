@@ -1,11 +1,11 @@
-import { GoogleGenAI, Type, Schema } from "@google/genai";
+import { GoogleGenAI, Type } from "@google/genai";
 import { BusinessBlueprint, SocialPost } from "../types";
 
 // Initialize Gemini Client
-// NOTE: In a real production app, ensure API_KEY is set in environment variables
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+// NOTE: Vercel Env Vars are injected via Vite 'define' plugin into process.env
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
-const blueprintSchema: Schema = {
+const blueprintSchema = {
   type: Type.OBJECT,
   properties: {
     businessName: { type: Type.STRING, description: "A catchy name for the fitness business" },
@@ -74,7 +74,7 @@ const blueprintSchema: Schema = {
 export const generateBusinessBlueprint = async (userDescription: string): Promise<BusinessBlueprint | null> => {
   try {
     if (!process.env.API_KEY) {
-      console.warn("No API Key provided. Returning mock data.");
+      console.warn("No API Key provided in environment variables. Returning mock data.");
       return getMockBlueprint();
     }
 

@@ -13,10 +13,24 @@ interface DashboardProps {
 const Dashboard: React.FC<DashboardProps> = ({ blueprint, revenueData, clients, isDarkMode = false }) => {
   const [isSaving, setIsSaving] = useState(false);
 
-  // Calculate stats from real data
+  // LOGIC: Parse price from blueprint (e.g. "$97/mo" -> 97)
+  const getPrice = () => {
+    try {
+        const priceString = blueprint.websiteData.pricing.find(p => p.name.includes('Pro') || p.name.includes('Premium'))?.price 
+                            || blueprint.websiteData.pricing[0]?.price 
+                            || "0";
+        return parseInt(priceString.replace(/[^0-9]/g, '')) || 0;
+    } catch (e) {
+        return 0;
+    }
+  };
+
+  const planPrice = getPrice();
   const activeClients = clients.filter(c => c.status === ClientStatus.ACTIVE).length;
   const leads = clients.filter(c => c.status === ClientStatus.LEAD).length;
-  const currentRevenue = activeClients * 200 + 12450; 
+  
+  // Real-time calculated revenue
+  const currentRevenue = activeClients * planPrice;
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -54,7 +68,7 @@ const Dashboard: React.FC<DashboardProps> = ({ blueprint, revenueData, clients, 
           { 
             label: 'Total Revenue', 
             value: `$${currentRevenue.toLocaleString()}`, 
-            sub: '+12% from last month', 
+            sub: 'Based on active subs', 
             icon: DollarSign, 
             color: 'text-green-600 dark:text-green-400', 
             bg: 'bg-green-100 dark:bg-green-900/30' 

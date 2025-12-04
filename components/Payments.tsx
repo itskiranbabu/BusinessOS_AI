@@ -1,17 +1,34 @@
 import React from 'react';
-import { BusinessBlueprint } from '../types';
-import { CreditCard, Link as LinkIcon, ExternalLink, DollarSign, Check } from 'lucide-react';
+import { BusinessBlueprint, Client, ClientStatus } from '../types';
+import { CreditCard, Link as LinkIcon, ExternalLink, Check } from 'lucide-react';
 
 interface PaymentsProps {
   blueprint: BusinessBlueprint;
+  clients?: Client[];
 }
 
-const Payments: React.FC<PaymentsProps> = ({ blueprint }) => {
+const Payments: React.FC<PaymentsProps> = ({ blueprint, clients = [] }) => {
   const { pricing } = blueprint.websiteData;
 
   const copyLink = (planName: string) => {
     alert(`Copied payment link for ${planName}: https://buy.stripe.com/test_${Math.random().toString(36).substring(7)}`);
   };
+
+  // Logic to find transaction history based on active clients
+  const transactions = clients
+    .filter(c => c.status === ClientStatus.ACTIVE)
+    .map(c => ({
+        id: c.id,
+        customer: c.name,
+        amount: pricing[0]?.price || "$97",
+        status: "Succeeded",
+        date: c.joinDate
+    }));
+
+  const mrr = transactions.reduce((acc, curr) => {
+      const val = parseInt(curr.amount.replace(/[^0-9]/g, '')) || 0;
+      return acc + val;
+  }, 0);
 
   return (
     <div className="space-y-8 animate-fade-in">
@@ -33,16 +50,16 @@ const Payments: React.FC<PaymentsProps> = ({ blueprint }) => {
                 <CreditCard size={18} />
                 <span className="text-sm font-medium uppercase tracking-wide">Monthly Recurring Revenue</span>
               </div>
-              <div className="text-4xl font-bold tracking-tight text-white">$4,250.00</div>
+              <div className="text-4xl font-bold tracking-tight text-white">${mrr.toLocaleString()}.00</div>
             </div>
             <div className="mt-8 space-y-3">
               <div className="flex justify-between text-sm py-2 border-b border-slate-700/50">
                 <span className="text-slate-400">Active Subscriptions</span>
-                <span className="font-bold text-white">24</span>
+                <span className="font-bold text-white">{transactions.length}</span>
               </div>
               <div className="flex justify-between text-sm py-2">
                 <span className="text-slate-400">Avg. Revenue Per User</span>
-                <span className="font-bold text-white">$177</span>
+                <span className="font-bold text-white">${transactions.length > 0 ? (mrr / transactions.length).toFixed(0) : 0}</span>
               </div>
             </div>
          </div>
@@ -95,12 +112,18 @@ const Payments: React.FC<PaymentsProps> = ({ blueprint }) => {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-            {[1, 2, 3].map((_, i) => (
+            {transactions.length === 0 ? (
+                <tr>
+                    <td colSpan={4} className="px-6 py-8 text-center text-slate-500 dark:text-slate-400">
+                        No transactions found. Add active clients to the CRM to see revenue.
+                    </td>
+                </tr>
+            ) : transactions.map((tx, i) => (
               <tr key={i} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                <td className="px-6 py-4 font-medium text-slate-900 dark:text-white">Sarah Connor</td>
-                <td className="px-6 py-4 text-slate-600 dark:text-slate-400">$297.00</td>
+                <td className="px-6 py-4 font-medium text-slate-900 dark:text-white">{tx.customer}</td>
+                <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{tx.amount}</td>
                 <td className="px-6 py-4"><span className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-2.5 py-1 rounded-full text-xs font-medium">Succeeded</span></td>
-                <td className="px-6 py-4 text-slate-500 dark:text-slate-400 text-right">Oct 24, 2023</td>
+                <td className="px-6 py-4 text-slate-500 dark:text-slate-400 text-right">{tx.date}</td>
               </tr>
             ))}
           </tbody>
