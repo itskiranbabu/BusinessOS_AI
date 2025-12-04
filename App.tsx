@@ -1,0 +1,350 @@
+import React, { useState, useEffect } from 'react';
+import Sidebar from './components/Sidebar';
+import Dashboard from './components/Dashboard';
+import Onboarding from './components/Onboarding';
+import CRM from './components/CRM';
+import WebsiteBuilder from './components/WebsiteBuilder';
+import ContentEngine from './components/ContentEngine';
+import Automations from './components/Automations';
+import Payments from './components/Payments';
+import Settings from './components/Settings';
+import Auth from './components/Auth';
+import ToastContainer, { ToastMessage, ToastType } from './components/Toast';
+import { AppView, BusinessBlueprint, Client, ProjectData, ClientStatus, SocialPost, Automation } from './types';
+import { fetchRevenueData } from './services/mockDatabase';
+import { storageService } from './services/storageService';
+import { regenerateContentPlan } from './services/geminiService';
+import { supabase, isSupabaseConfigured } from './services/supabaseClient';
+import { authService } from './services/authService';
+import { Loader2 } from 'lucide-react';
+
+const App: React.FC = () => {
+  // Theme State
+  const [isDarkMode, setIsDarkMode] = useState(false);
+
+  // Auth State
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [authChecking, setAuthChecking] = useState(true);
+
+  // App State
+  const [isLoading, setIsLoading] = useState(false);
+  const [hasOnboarded, setHasOnboarded] = useState(false);
+  const [currentView, setCurrentView] = useState<AppView>(AppView.DASHBOARD);
+  
+  // Data State
+  const [blueprint, setBlueprint] = useState<BusinessBlueprint | null>(null);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [automations, setAutomations] = useState<Automation[]>([]);
+  const [revenueData, setRevenueData] = useState<any[]>([]);
+
+  // Toast State
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
+
+  const addToast = (message: string, type: ToastType = 'info') => {
+    const id = Math.random().toString(36).substr(2, 9);
+    setToasts(prev => [...prev, { id, message, type }]);
+  };
+
+  const removeToast = (id: string) => {
+    setToasts(prev => prev.filter(t => t.id !== id));
+  };
+
+  // Toggle Theme
+  const toggleTheme = () => {
+    setIsDarkMode(!isDarkMode);
+    if (!isDarkMode) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+  };
+
+  // Initialize Theme
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      setIsDarkMode(true);
+      document.documentElement.classList.add('dark');
+    }
+  }, []);
+
+  // Initialize Auth Check
+  useEffect(() => {
+    const checkAuth = async () => {
+      if (isSupabaseConfigured() && supabase) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          setUserEmail(session.user.email || '');
+          setIsAuthenticated(true);
+        }
+        
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+          if (session?.user) {
+            setUserEmail(session.user.email || '');
+            setIsAuthenticated(true);
+          } else {
+            setIsAuthenticated(false);
+            setUserEmail(null);
+            setBlueprint(null);
+          }
+        });
+        
+        setAuthChecking(false);
+        return () => subscription.unsubscribe();
+      } else {
+        setAuthChecking(false);
+      }
+    };
+
+    checkAuth();
+  }, []);
+
+  // Check for saved project on mount/auth
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadSavedProject();
+    }
+  }, [isAuthenticated]);
+
+  const loadSavedProject = async () => {
+    setIsLoading(true);
+    const saved = await storageService.loadProject();
+    if (saved) {
+      setBlueprint(saved.data.blueprint);
+      setClients(saved.data.clients);
+      setAutomations(saved.data.automations || []);
+      fetchRevenueData().then(setRevenueData);
+      setHasOnboarded(true);
+      addToast('Project loaded successfully', 'success');
+    } else {
+      // Default automations if new project
+      setAutomations([
+        { id: '1', name: 'Weekly Client Check-in', type: 'WhatsApp', trigger: 'Every Monday 8AM', status: 'Active', stats: { sent: 0, opened: '0%' } },
+        { id: '2', name: 'New Lead Welcome', type: 'Email', trigger: 'On Sign Up', status: 'Active', stats: { sent: 0, opened: '0%' } },
+      ]);
+    }
+    setIsLoading(false);
+  };
+
+  // Unified Save
+  const handleSaveProject = async (
+    updatedBlueprint?: BusinessBlueprint, 
+    updatedClients?: Client[],
+    updatedAutomations?: Automation[]
+  ) => {
+    const bp = updatedBlueprint || blueprint;
+    const cl = updatedClients || clients;
+    const au = updatedAutomations || automations;
+
+    if (bp) {
+      const projectData: ProjectData = {
+        blueprint: bp,
+        clients: cl,
+        automations: au
+      };
+      await storageService.saveProject(projectData);
+    }
+  };
+
+  const handleUpdateClients = (newClients: Client[]) => {
+    setClients(newClients);
+    handleSaveProject(undefined, newClients, undefined);
+  };
+
+  const handleUpdateAutomations = (newAutomations: Automation[]) => {
+    setAutomations(newAutomations);
+    handleSaveProject(undefined, undefined, newAutomations);
+  };
+  
+  const handleUpdateBlueprint = (updates: Partial<BusinessBlueprint>) => {
+    if (blueprint) {
+      const newBlueprint = { ...blueprint, ...updates };
+      setBlueprint(newBlueprint);
+      handleSaveProject(newBlueprint);
+      addToast('Changes saved successfully', 'success');
+    }
+  };
+
+  const handleLogin = (email: string) => {
+    setUserEmail(email);
+    setIsAuthenticated(true);
+    addToast(`Welcome back, ${email}`, 'success');
+  };
+
+  const handleLogout = async () => {
+    await authService.signOut();
+    setIsAuthenticated(false);
+    setUserEmail(null);
+    setBlueprint(null);
+    setHasOnboarded(false);
+    addToast('Signed out successfully', 'info');
+  };
+
+  const handleOnboardingComplete = async (data: BusinessBlueprint) => {
+    setBlueprint(data);
+    const initialClients: Client[] = [
+      {
+        id: '1',
+        name: 'Example Lead',
+        email: 'lead@example.com',
+        status: ClientStatus.LEAD,
+        program: 'Interest',
+        joinDate: new Date().toISOString().split('T')[0],
+        lastCheckIn: 'N/A',
+        progress: 0
+      }
+    ];
+    setClients(initialClients);
+    
+    // Initialize default automations
+    const initialAutomations: Automation[] = [
+        { id: '1', name: 'Weekly Client Check-in', type: 'WhatsApp', trigger: 'Every Monday 8AM', status: 'Active', stats: { sent: 0, opened: '0%' } },
+        { id: '2', name: 'New Lead Welcome', type: 'Email', trigger: 'On Sign Up', status: 'Active', stats: { sent: 0, opened: '0%' } },
+    ];
+    setAutomations(initialAutomations);
+
+    fetchRevenueData().then(setRevenueData);
+    setHasOnboarded(true);
+    await handleSaveProject(data, initialClients, initialAutomations);
+    addToast('Business initialized successfully!', 'success');
+  };
+
+  // Handlers
+  const handleAddClient = (clientData: Partial<Client>) => {
+    const newClient: Client = {
+      id: Math.random().toString(36).substr(2, 9),
+      name: clientData.name || 'New Client',
+      email: clientData.email || '',
+      status: clientData.status || ClientStatus.LEAD,
+      program: clientData.program || 'General',
+      joinDate: new Date().toISOString().split('T')[0],
+      lastCheckIn: 'Never',
+      progress: 0
+    };
+    handleUpdateClients([...clients, newClient]);
+    addToast('Client added successfully', 'success');
+  };
+
+  const handleUpdateClient = (id: string, updates: Partial<Client>) => {
+    const updated = clients.map(c => c.id === id ? { ...c, ...updates } : c);
+    handleUpdateClients(updated);
+    addToast('Client updated', 'success');
+  };
+
+  const handleDeleteClient = (id: string) => {
+    const updated = clients.filter(c => c.id !== id);
+    handleUpdateClients(updated);
+    addToast('Client removed', 'info');
+  };
+
+  const handleUpdateContentPlan = (newPlan: SocialPost[]) => {
+    if (blueprint) {
+      handleUpdateBlueprint({ contentPlan: newPlan });
+    }
+  };
+
+  const handleRegenerateContent = async (): Promise<SocialPost[]> => {
+    if (blueprint) {
+      addToast('Generating new content strategy...', 'info');
+      const plan = await regenerateContentPlan(blueprint.niche);
+      addToast('Content plan refreshed', 'success');
+      return plan;
+    }
+    return [];
+  };
+
+  if (authChecking) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 text-slate-500 dark:text-slate-400 gap-2">
+        <Loader2 className="animate-spin" /> Starting BusinessOS...
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <>
+        <Auth onLogin={handleLogin} />
+        <ToastContainer toasts={toasts} removeToast={removeToast} />
+      </>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 text-slate-500 dark:text-slate-400 gap-2">
+        <Loader2 className="animate-spin" /> Loading your empire...
+      </div>
+    );
+  }
+
+  if (!hasOnboarded) {
+    return <Onboarding onComplete={handleOnboardingComplete} />;
+  }
+
+  const renderContent = () => {
+    if (!blueprint) return null;
+
+    switch (currentView) {
+      case AppView.DASHBOARD:
+        return <Dashboard blueprint={blueprint} revenueData={revenueData} clients={clients} isDarkMode={isDarkMode} />;
+      case AppView.CRM:
+        return (
+          <CRM 
+            clients={clients} 
+            onAddClient={handleAddClient} 
+            onUpdateClient={handleUpdateClient}
+            onDeleteClient={handleDeleteClient}
+          />
+        );
+      case AppView.WEBSITE:
+        return <WebsiteBuilder blueprint={blueprint} onUpdate={(updates) => handleUpdateBlueprint({ websiteData: { ...blueprint.websiteData, ...updates } })} />;
+      case AppView.CONTENT:
+        return (
+          <ContentEngine 
+            blueprint={blueprint} 
+            onUpdatePlan={handleUpdateContentPlan}
+            onRegenerate={handleRegenerateContent}
+          />
+        );
+      case AppView.AUTOMATIONS:
+        return <Automations automations={automations} onUpdate={handleUpdateAutomations} />;
+      case AppView.PAYMENTS:
+        return <Payments blueprint={blueprint} />;
+      case AppView.SETTINGS:
+        return (
+          <Settings 
+            blueprint={blueprint} 
+            userEmail={userEmail} 
+            onUpdateProfile={handleUpdateBlueprint} 
+          />
+        );
+      default:
+        return <div className="p-8 text-slate-500">Feature coming soon...</div>;
+    }
+  };
+
+  return (
+    <div className="flex h-screen bg-slate-50 dark:bg-slate-950 overflow-hidden transition-colors duration-300">
+      <ToastContainer toasts={toasts} removeToast={removeToast} />
+      <Sidebar 
+        currentView={currentView} 
+        onChangeView={setCurrentView} 
+        onLogout={handleLogout}
+        isDarkMode={isDarkMode}
+        toggleTheme={toggleTheme}
+      />
+      
+      <main className="flex-1 overflow-auto relative">
+        <div className="p-8 max-w-7xl mx-auto">
+          {renderContent()}
+        </div>
+      </main>
+    </div>
+  );
+};
+
+export default App;
