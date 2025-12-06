@@ -10,12 +10,17 @@ import Payments from './components/Payments';
 import Settings from './components/Settings';
 import Auth from './components/Auth';
 import ToastContainer, { ToastMessage, ToastType } from './components/Toast';
-import { AppView, BusinessBlueprint, Client, ProjectData, ClientStatus, SocialPost, Automation } from './types';
-import { fetchRevenueData } from './services/mockDatabase';
-import { storageService } from './services/storageService';
+import { AppView, BusinessBlueprint, Client, ClientStatus, SocialPost, Automation } from './types';
 import { regenerateContentPlan } from './services/geminiService';
 import { supabase, isSupabaseConfigured } from './services/supabaseClient';
 import { authService } from './services/authService';
+import { 
+  clientsService, 
+  socialPostsService, 
+  automationsService, 
+  blueprintService,
+  analyticsService 
+} from './services/supabaseService';
 import { Loader2 } from 'lucide-react';
 
 const App: React.FC = () => {
@@ -93,6 +98,8 @@ const App: React.FC = () => {
             setIsAuthenticated(false);
             setUserEmail(null);
             setBlueprint(null);
+            setClients([]);
+            setAutomations([]);
           }
         });
         subscription = data.subscription;
@@ -109,71 +116,72 @@ const App: React.FC = () => {
     };
   }, []);
 
-  // Check for saved project on mount/auth
+  // Load data and setup real-time subscriptions when authenticated
   useEffect(() => {
-    if (isAuthenticated) {
-      loadSavedProject();
-    }
+    if (!isAuthenticated) return;
+
+    let unsubscribeClients: (() => void) | undefined;
+    let unsubscribeAutomations: (() => void) | undefined;
+    let unsubscribeBlueprint: (() => void) | undefined;
+    let unsubscribePosts: (() => void) | undefined;
+
+    const loadData = async () => {
+      setIsLoading(true);
+      try {
+        // Load all data in parallel
+        const [blueprintData, clientsData, automationsData, postsData, revenueData] = await Promise.all([
+          blueprintService.get(),
+          clientsService.getAll(),
+          automationsService.getAll(),
+          socialPostsService.getAll(),
+          analyticsService.getRevenue()
+        ]);
+
+        if (blueprintData) {
+          // Merge posts into blueprint
+          blueprintData.contentPlan = postsData;
+          setBlueprint(blueprintData);
+          setHasOnboarded(true);
+        }
+
+        setClients(clientsData);
+        setAutomations(automationsData.length > 0 ? automationsData : [
+          { id: '1', name: 'Weekly Client Check-in', type: 'WhatsApp', trigger: 'Every Monday 8AM', status: 'Active', stats: { sent: 0, opened: '0%' } },
+          { id: '2', name: 'New Lead Welcome', type: 'Email', trigger: 'On Sign Up', status: 'Active', stats: { sent: 0, opened: '0%' } },
+        ]);
+        setRevenueData(revenueData);
+
+        // Setup real-time subscriptions
+        unsubscribeClients = clientsService.subscribeToChanges(setClients);
+        unsubscribeAutomations = automationsService.subscribeToChanges(setAutomations);
+        unsubscribeBlueprint = blueprintService.subscribeToChanges((bp) => {
+          if (bp) {
+            setBlueprint(prev => prev ? { ...prev, ...bp } : bp);
+          }
+        });
+        unsubscribePosts = socialPostsService.subscribeToChanges((posts) => {
+          setBlueprint(prev => prev ? { ...prev, contentPlan: posts } : null);
+        });
+
+        addToast('Data loaded successfully', 'success');
+      } catch (error: any) {
+        console.error('Error loading data:', error);
+        addToast(error.message || 'Failed to load data', 'error');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadData();
+
+    // Cleanup subscriptions
+    return () => {
+      if (unsubscribeClients) unsubscribeClients();
+      if (unsubscribeAutomations) unsubscribeAutomations();
+      if (unsubscribeBlueprint) unsubscribeBlueprint();
+      if (unsubscribePosts) unsubscribePosts();
+    };
   }, [isAuthenticated]);
-
-  const loadSavedProject = async () => {
-    setIsLoading(true);
-    const saved = await storageService.loadProject();
-    if (saved) {
-      setBlueprint(saved.data.blueprint);
-      setClients(saved.data.clients);
-      setAutomations(saved.data.automations || []);
-      fetchRevenueData().then(setRevenueData);
-      setHasOnboarded(true);
-      addToast('Project loaded successfully', 'success');
-    } else {
-      // Default automations if new project
-      setAutomations([
-        { id: '1', name: 'Weekly Client Check-in', type: 'WhatsApp', trigger: 'Every Monday 8AM', status: 'Active', stats: { sent: 0, opened: '0%' } },
-        { id: '2', name: 'New Lead Welcome', type: 'Email', trigger: 'On Sign Up', status: 'Active', stats: { sent: 0, opened: '0%' } },
-      ]);
-    }
-    setIsLoading(false);
-  };
-
-  // Unified Save
-  const handleSaveProject = async (
-    updatedBlueprint?: BusinessBlueprint, 
-    updatedClients?: Client[],
-    updatedAutomations?: Automation[]
-  ) => {
-    const bp = updatedBlueprint || blueprint;
-    const cl = updatedClients || clients;
-    const au = updatedAutomations || automations;
-
-    if (bp) {
-      const projectData: ProjectData = {
-        blueprint: bp,
-        clients: cl,
-        automations: au
-      };
-      await storageService.saveProject(projectData);
-    }
-  };
-
-  const handleUpdateClients = (newClients: Client[]) => {
-    setClients(newClients);
-    handleSaveProject(undefined, newClients, undefined);
-  };
-
-  const handleUpdateAutomations = (newAutomations: Automation[]) => {
-    setAutomations(newAutomations);
-    handleSaveProject(undefined, undefined, newAutomations);
-  };
-  
-  const handleUpdateBlueprint = (updates: Partial<BusinessBlueprint>) => {
-    if (blueprint) {
-      const newBlueprint = { ...blueprint, ...updates };
-      setBlueprint(newBlueprint);
-      handleSaveProject(newBlueprint);
-      addToast('Changes saved successfully', 'success');
-    }
-  };
 
   const handleLogin = (email: string) => {
     setUserEmail(email);
@@ -187,14 +195,23 @@ const App: React.FC = () => {
     setUserEmail(null);
     setBlueprint(null);
     setHasOnboarded(false);
+    setClients([]);
+    setAutomations([]);
     addToast('Signed out successfully', 'info');
   };
 
   const handleOnboardingComplete = async (data: BusinessBlueprint) => {
-    setBlueprint(data);
-    const initialClients: Client[] = [
-      {
-        id: '1',
+    try {
+      // Save blueprint to database
+      const savedBlueprint = await blueprintService.upsert(data);
+      
+      // Save content plan
+      if (data.contentPlan && data.contentPlan.length > 0) {
+        await socialPostsService.bulkCreate(data.contentPlan);
+      }
+
+      // Create initial client
+      const initialClient = await clientsService.create({
         name: 'Example Lead',
         email: 'lead@example.com',
         status: ClientStatus.LEAD,
@@ -202,75 +219,132 @@ const App: React.FC = () => {
         joinDate: new Date().toISOString().split('T')[0],
         lastCheckIn: 'N/A',
         progress: 0
+      });
+
+      // Create default automations
+      const defaultAutomations = [
+        { name: 'Weekly Client Check-in', type: 'WhatsApp' as const, trigger: 'Every Monday 8AM', status: 'Active' as const, stats: { sent: 0, opened: '0%' } },
+        { name: 'New Lead Welcome', type: 'Email' as const, trigger: 'On Sign Up', status: 'Active' as const, stats: { sent: 0, opened: '0%' } },
+      ];
+
+      for (const auto of defaultAutomations) {
+        await automationsService.create(auto);
       }
-    ];
-    setClients(initialClients);
-    
-    // Initialize default automations
-    const initialAutomations: Automation[] = [
-        { id: '1', name: 'Weekly Client Check-in', type: 'WhatsApp', trigger: 'Every Monday 8AM', status: 'Active', stats: { sent: 0, opened: '0%' } },
-        { id: '2', name: 'New Lead Welcome', type: 'Email', trigger: 'On Sign Up', status: 'Active', stats: { sent: 0, opened: '0%' } },
-    ];
-    setAutomations(initialAutomations);
 
-    fetchRevenueData().then(setRevenueData);
-    setHasOnboarded(true);
-    await handleSaveProject(data, initialClients, initialAutomations);
-    addToast('Business initialized successfully!', 'success');
+      setBlueprint(savedBlueprint);
+      setHasOnboarded(true);
+      addToast('Business initialized successfully!', 'success');
+    } catch (error: any) {
+      console.error('Error during onboarding:', error);
+      addToast(error.message || 'Failed to complete onboarding', 'error');
+    }
   };
 
-  // Handlers
-  const handleAddClient = (clientData: Partial<Client>) => {
-    const newClient: Client = {
-      id: Math.random().toString(36).substr(2, 9),
-      name: clientData.name || 'New Client',
-      email: clientData.email || '',
-      status: clientData.status || ClientStatus.LEAD,
-      program: clientData.program || 'General',
-      joinDate: new Date().toISOString().split('T')[0],
-      lastCheckIn: 'Never',
-      progress: 0
-    };
-    handleUpdateClients([...clients, newClient]);
-    addToast('Client added successfully', 'success');
+  // Client Handlers
+  const handleAddClient = async (clientData: Partial<Client>) => {
+    try {
+      await clientsService.create({
+        name: clientData.name || 'New Client',
+        email: clientData.email || '',
+        status: clientData.status || ClientStatus.LEAD,
+        program: clientData.program || 'General',
+        joinDate: new Date().toISOString().split('T')[0],
+        lastCheckIn: 'Never',
+        progress: 0
+      });
+      addToast('Client added successfully', 'success');
+    } catch (error: any) {
+      console.error('Error adding client:', error);
+      addToast(error.message || 'Failed to add client', 'error');
+    }
   };
 
-  const handleUpdateClient = (id: string, updates: Partial<Client>) => {
-    const updated = clients.map(c => c.id === id ? { ...c, ...updates } : c);
-    handleUpdateClients(updated);
-    addToast('Client updated', 'success');
+  const handleUpdateClient = async (id: string, updates: Partial<Client>) => {
+    try {
+      await clientsService.update(id, updates);
+      addToast('Client updated', 'success');
+    } catch (error: any) {
+      console.error('Error updating client:', error);
+      addToast(error.message || 'Failed to update client', 'error');
+    }
   };
 
-  const handleDeleteClient = (id: string) => {
-    const updated = clients.filter(c => c.id !== id);
-    handleUpdateClients(updated);
-    addToast('Client removed', 'info');
+  const handleDeleteClient = async (id: string) => {
+    try {
+      await clientsService.delete(id);
+      addToast('Client removed', 'info');
+    } catch (error: any) {
+      console.error('Error deleting client:', error);
+      addToast(error.message || 'Failed to delete client', 'error');
+    }
   };
 
   const handleCaptureLead = (email: string) => {
     handleAddClient({
-        name: 'Website Lead',
-        email: email,
-        status: ClientStatus.LEAD,
-        program: 'Waitlist',
+      name: 'Website Lead',
+      email: email,
+      status: ClientStatus.LEAD,
+      program: 'Waitlist',
     });
     addToast('New lead captured from website!', 'success');
   };
 
-  const handleUpdateContentPlan = (newPlan: SocialPost[]) => {
-    if (blueprint) {
-      handleUpdateBlueprint({ contentPlan: newPlan });
+  // Blueprint Handlers
+  const handleUpdateBlueprint = async (updates: Partial<BusinessBlueprint>) => {
+    if (!blueprint) return;
+
+    try {
+      const updatedBlueprint = { ...blueprint, ...updates };
+      await blueprintService.upsert(updatedBlueprint);
+      addToast('Changes saved successfully', 'success');
+    } catch (error: any) {
+      console.error('Error updating blueprint:', error);
+      addToast(error.message || 'Failed to save changes', 'error');
+    }
+  };
+
+  // Content Handlers
+  const handleUpdateContentPlan = async (newPlan: SocialPost[]) => {
+    try {
+      // Delete all existing posts
+      await socialPostsService.deleteAll();
+      
+      // Create new posts
+      if (newPlan.length > 0) {
+        await socialPostsService.bulkCreate(newPlan);
+      }
+      
+      addToast('Content plan updated', 'success');
+    } catch (error: any) {
+      console.error('Error updating content plan:', error);
+      addToast(error.message || 'Failed to update content plan', 'error');
     }
   };
 
   const handleRegenerateContent = async (): Promise<SocialPost[]> => {
-    if (blueprint) {
+    if (!blueprint) return [];
+
+    try {
       addToast('Generating new content strategy...', 'info');
       const plan = await regenerateContentPlan(blueprint.niche);
+      
+      // Save to database
+      await socialPostsService.deleteAll();
+      await socialPostsService.bulkCreate(plan);
+      
       addToast('Content plan refreshed', 'success');
       return plan;
+    } catch (error: any) {
+      console.error('Error regenerating content:', error);
+      addToast(error.message || 'Failed to regenerate content', 'error');
+      return [];
     }
-    return [];
+  };
+
+  // Automation Handlers
+  const handleUpdateAutomations = async (newAutomations: Automation[]) => {
+    // This is called from Automations component
+    // Real-time subscription will handle the update
   };
 
   if (authChecking) {
@@ -319,11 +393,11 @@ const App: React.FC = () => {
         );
       case AppView.WEBSITE:
         return (
-            <WebsiteBuilder 
-                blueprint={blueprint} 
-                onUpdate={(updates) => handleUpdateBlueprint({ websiteData: { ...blueprint.websiteData, ...updates } })} 
-                onCaptureLead={handleCaptureLead}
-            />
+          <WebsiteBuilder 
+            blueprint={blueprint} 
+            onUpdate={(updates) => handleUpdateBlueprint({ websiteData: { ...blueprint.websiteData, ...updates } })} 
+            onCaptureLead={handleCaptureLead}
+          />
         );
       case AppView.CONTENT:
         return (
