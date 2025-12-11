@@ -40,6 +40,11 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
     }
   };
 
+  // Check if Supabase is configured
+  const isSupabaseConfigured = 
+    import.meta.env.VITE_SUPABASE_URL || 
+    import.meta.env.NEXT_PUBLIC_SUPABASE_URL;
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-stretch transition-colors duration-300">
       {/* Left Panel - Visuals */}
@@ -161,7 +166,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
             
             <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800 text-center">
                 <p className="text-xs text-slate-400 dark:text-slate-500">
-                {process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL ? 
+                {isSupabaseConfigured ? 
                     'Connected to Supabase Secure Auth' : 
                     'Demo Mode (Default credentials pre-filled)'}
                 </p>
