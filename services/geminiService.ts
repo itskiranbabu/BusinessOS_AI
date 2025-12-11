@@ -1,9 +1,9 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { BusinessBlueprint, SocialPost } from "../types";
 
-// Initialize Gemini Client
-// NOTE: Vercel Env Vars are injected via Vite 'define' plugin into process.env
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Initialize Gemini Client with Vite environment variables
+const apiKey = import.meta.env.VITE_API_KEY || import.meta.env.API_KEY || '';
+const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
 
 const blueprintSchema = {
   type: Type.OBJECT,
@@ -73,7 +73,7 @@ const blueprintSchema = {
 
 export const generateBusinessBlueprint = async (userDescription: string): Promise<BusinessBlueprint | null> => {
   try {
-    if (!process.env.API_KEY) {
+    if (!ai || !apiKey) {
       console.warn("No API Key provided in environment variables. Returning mock data.");
       return getMockBlueprint();
     }
@@ -102,7 +102,7 @@ export const generateBusinessBlueprint = async (userDescription: string): Promis
 };
 
 export const regenerateContentPlan = async (niche: string): Promise<SocialPost[]> => {
-  if (!process.env.API_KEY) {
+  if (!ai || !apiKey) {
     console.warn("No API Key provided. Returning mock content.");
     return getMockBlueprint().contentPlan;
   }
